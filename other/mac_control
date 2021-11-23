@@ -126,10 +126,10 @@ find $LOG_PATH \
 -exec rm -rv {} +
 
 
-echo "Subject: shemelev@samba.ru" > ${LOG_PATH}mail  #  Create email.
+echo "Subject: example@email.com" > ${LOG_PATH}mail  #  Create email.
 grep failed ${LOG_PATH}mac_control.log >> ${LOG_PATH}mail #  Append to email lines
                                           #+ with failed matches.
 
 if [[ $(wc -l ${LOG_PATH}mail | cut -d' ' -f1) -gt 1 ]]; then
-    sendmail shemelev@samba.ru < ${LOG_PATH}mail      #  If email contains body
+    sendmail example@email.com < ${LOG_PATH}mail      #  If email contains body
 fi                                        #+ then send it.
