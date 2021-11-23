@@ -1,0 +1,135 @@
+#!/bin/bash
+#
+#  Usage: Scan local network with utility "arp-scan", 
+#+ create log files with IP and MAC adresses. Then 
+#+ match two log files created in a different time
+#+ for checking new machines or any changing in network
+#+ configuration. 
+#  Then script remember all machines which has been
+#+ scaned earlier in another file witch I named 
+#+ "full_mac_address.log".
+
+#  Check root privileges
+if [[ "$UID" -ne 0 ]]; then
+    echo "Script requires root privileges."
+    exit $E_NOROOT
+fi
+
+
+################################
+########  VARIABLE PART  #######
+################################
+
+LOG_PATH="/var/log/mac-database/"
+PATH_DATE=`date '+%m-%d-%y'`
+DAYLOGDIR="$LOG_PATH$PATH_DATE/"
+DATE=`date '+%m-%d-%y_%R'`
+#LASTDAY="$(( $(date '+%d' | sed 's/0//') - 1))"
+main_log_file='full_mac_address.log'
+
+#  Check log directory exist. If not then create directory.
+if [[ ! -d $LOG_PATH ]]; then
+    mkdir $LOG_PATH
+fi
+if [[ ! -d $DAYLOGDIR ]]; then
+    mkdir $DAYLOGDIR
+fi
+#  If full log file doesn't exit then create it.
+if [[ ! -f ${LOG_PATH}${main_log_file} ]]; then 
+    touch ${LOG_PATH}$main_log_file
+fi
+#  Install arp-scan if it doesn't install.
+if [[ `dpkg -l | grep arp-scan | wc -l` -lt 1 ]]; then
+    apt install -y arp-scan
+fi
+#  Install sendmail if it diesn't install.
+if [[ `dpkg -l | grep sendmail | wc -l` -lt ]]; then
+    apt install -y sendmail
+fi
+
+FIND_LASTDAY=`find $DAYLOGDIR -type f -cmin +1200 -ctime -1`
+ADDR="192.168.0.0"
+E_NOROOT=80
+cat_concatinated="${LOG_PATH}$main_log_file"
+cat1="$DAYLOGDIR${ADDR}_$DATE"
+cat2="${FIND_LASTDAY}"
+
+
+#  Scan network, modify infomation and save it in log file
+/usr/sbin/arp-scan --interface=enp2s0 $ADDR/24 |\
+awk -F'[\t]' '{print $1"\t"$2}' |\
+sed '$d' | sed '$d' |\
+sed '1,2d' | sed '/^\t$/d' |\
+cut -d'.' -f4 | sort -n > $DAYLOGDIR${ADDR}_$DATE
+
+
+
+
+###############################
+#######  MATCHING PART  #######
+###############################
+
+#  Matching first loop value with nasted loop value.
+c=0
+for i in `seq $(wc -l $DAYLOGDIR${ADDR}_$DATE | cut -d' ' -f1)`; do 
+#  `seq #count of new created with arp-scan log file`
+    sed1=`sed -n "${i}p" $cat1` #  Use sed for catch one line for matching.
+    for r in `seq $(wc -l $LOG_PATH$main_log_file | cut -d' ' -f1)`; do 
+        sed2=`sed -n "${r}p" $cat_concatinated` #  Second line for matching.
+        if [[ "$sed1" = "$sed2" ]]; then #  If two lines the same, then
+		                         #+ increment value of succeeded 
+            echo "$sed1 succeed"         #+ matches and output message.
+	    c=$(($c + 1))
+        fi
+    done
+            if [[ $c -lt 1 ]]; then      #  If succeed values less
+                echo "$sed1 failed"      #+ than one show error message. 
+		                         #  It meens that values
+	    fi                           #+ doesn't matched at all.
+	                                 #+ 
+    c=0                                  #  Reset value of succeeded
+                                         #+ matching.    
+done > ${LOG_PATH}mac_control.log            #  Redirect stream to file. 
+#echo -e "\n=========================================\n" >> \
+#	${LOG_PATH}mac_control.log
+
+
+
+
+#  Check log files for existing. Then merge two
+#+ log files in one database there preserved all
+#+ ip with mac addresses.
+
+if [[ -f $LOG_PATH$main_log_file ]]; then 
+#  If concatinated log file was exist then merge
+#+ new scanning info with it.
+    cat $cat1 $LOG_PATH$main_log_file \
+    > $LOG_PATH${main_log_file}.bak
+    mv $LOG_PATH${main_log_file}.bak $LOG_PATH$main_log_file
+    awk '!duplicated[$0]++' $LOG_PATH$main_log_file | sort -n > $LOG_PATH${main_log_file}1
+    mv $LOG_PATH${main_log_file}1  $LOG_PATH${main_log_file}
+elif [[ -f $cat2 && ! -f $LOG_PATH$main_log_file ]]; then
+#  Else...if concatinated log file doesn't exist,
+#+ then use for merge last log.
+    cat $cat1 $cat2 |\
+    awk '!duplicated[$0]++' >> $LOG_PATH$main_log_file
+else			
+#  Else if both tests wos failed it seems like
+#+ first script use.
+    echo "This is first log!"
+fi
+
+find $LOG_PATH \
+-maxdepth 1 \
+-ctime +7 \
+-type d \
+-exec rm -rv {} +
+
+
+echo "Subject: shemelev@samba.ru" > ${LOG_PATH}mail  #  Create email.
+grep failed ${LOG_PATH}mac_control.log >> ${LOG_PATH}mail #  Append to email lines
+                                          #+ with failed matches.
+
+if [[ $(wc -l ${LOG_PATH}mail | cut -d' ' -f1) -gt 1 ]]; then
+    sendmail shemelev@samba.ru < ${LOG_PATH}mail      #  If email contains body
+fi                                        #+ then send it.
