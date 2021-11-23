@@ -1,0 +1,48 @@
+#!/bin/bash
+#
+#  Usage: generate password for vnc serices 
+#+ by calculating hashes of host mac adresses.
+
+MAC_PATH="/var/log/mac-database/"
+MAC_LIST=`cat ${MAC_PATH}full* | awk -F'[\t]' '{print $2}'`
+
+
+usage() {
+    echo "Usage: basename $0 [IP address ...]"
+}
+
+full_list() {
+for i in $(seq 1 $(wc -l ${MAC_PATH}full* | cut -d' ' -f1) ); do
+    macs=`sed -n "${i}p" ${MAC_PATH}full* | awk -F'[\t]' '{print $2}'`
+    ips=`sed -n "${i}p" ${MAC_PATH}full* | awk -F'[\t]' '{print $1}'`
+    echo -ne "$ips \t"
+    echo -ne "$macs \t"
+    echo "$macs" | b2sum | sha512sum | fold -w20 | sed -n '2p'
+done
+}
+
+selected() {
+    for i in $@; do
+        macs=`sed -ne "/^$i\t/p" ${MAC_PATH}full* | awk -F'[\t]' '{print $2}'`
+	ips=`sed -ne "/^$i\t/p" ${MAC_PATH}full* | awk -F'[\t]' '{print $1}'`
+	echo -ne "IP-address: $ips  "
+	echo -ne "MAC: $macs  "
+	echo -ne "password: "
+	echo "$macs" | b2sum | sha512sum | fold -w20 | sed -n '2p'
+    done    	
+}
+
+for arg in "$@"; do
+    case "$arg" in
+	--full         )
+            FULL=1   ;;
+    esac
+done
+
+if [[ $FULL -eq 1 ]]; then
+    full_list
+else
+    selected "$@"
+fi 
+
+
