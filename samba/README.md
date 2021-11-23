@@ -1,8 +1,7 @@
-## Samba COSMETICS config repo.
-
+## Samba script repo.
 
 ### Samba Server
-#### Описание конфигурации Samba сервера Эфти Косметикс
+#### Описание конфигурации Samba сервера.
 
 Здесь храняться файлы конфигурации, скрипты для администрирования Samba и пояснения к ним.  
 Samba настроена на использование ACL (Access Control List) позволяющее более гибко управлять политикой доступа к общим ресурсам.  
@@ -10,10 +9,7 @@ Samba настроена на использование ACL (Access Control Lis
   
 ## Конфигурация
 #### Путь к файлу конфигурации:
-/etc/samba/smb.conf
-
-#### Путь к share папкам:
-/srv/samba/
+/etc/samba/smb.conf  
 
 ## Логи
 #### Путь к логам samba:
@@ -23,7 +19,7 @@ Samba настроена на использование ACL (Access Control Lis
 m% - NetBIOS name of the client machine  
   
 ## Администрирование
-https://192.168.0.5:9090  
+https://$IP:9090  
 #### Добавление UNIX пользователя:
 * useradd -M -g smbuser -s /sbin/nologin $USERNAME \
 * passwd $USERNAME
@@ -34,25 +30,13 @@ smbpasswd -a $USERNAME
 #### Добавление UNIX пользователя в дополнительную группу:
 usermod -aG $GROUPNAME $USERNAME
 
-![Alt Text](https://github.com/AlexMaron/samba-cosmetics-samba/blob/master/groups.jpg)
-
-| № |  Group Names  |    Comments   |
-|:--- |     :---:     |          ---: |
-| 1 | smbamd        | Группа администраторов. Доступ ко всем папкам Samba. |
-| 2 | smbuser       | По умолчанию добавляется каждому пользователю Samba и на данный момент используется для папки /srv/samba/Общая исключая папку 'ИТ отдел'. |
-| 3 | smb-sklad     | Для папки /srv/samba/Склад |
-| 4 | smb-buh       | Для папки /srv/samba/бухгалтерия |
-| 5 | smb-technolog | Для папки /srv/samba/Технологи |
-| 6 | smb-marketing | Для папки /srv/samba/Маркетинг |
-| 7 | smbprinters   | Группа для принтеров
-
 #### Выдача ACL прав для папок
 **Просмотр прав для папки/файла:**  
 getfacl [path]  
-**Пример:** getfacl /srv/samba/Общая  
+**Пример:** getfacl /srv/
   
 **Папка без прав будет иметь такой вывод:**  
- \# file: srv/samba/  
+ \# file: srv/samba/
  \# owner: root  
  \# group: root  
  *user::rwx  
@@ -63,7 +47,7 @@ getfacl [path]
   
 **Добавление прав для группы:**  
 setfacl -m g:$GROUPNAME:$PERMISSIONS $PATH  
-**Пример:** setfacl -m g:smbadm:rwx /srv/samba/Общая  
+**Пример:** setfacl -m g:smbadm:rwx /srv/  
 **Добавление прав для отдельного пользователя:**  
 setfacl -m u:$USERNAME:$PERMISSINS $PATH  
 **Удаление прав:**  
@@ -76,7 +60,7 @@ setfacl -x $USERNAME
 Скрипты можно запускать напрямую из shell.
 Название скрипта | Опции | Описание
 :-----   | :---- | :-------:
-sambasmb | --- | [-vdr] [-n USERNAME] [-g GROUP,GROUP...] [-c COMMENT] [-a ACL PATH] [-p PERMISSION] [-s PASSWORD MODE].<br/>Автоматический комбаин который позволяет добавлять unix и samba пользователя, добавлять к ним автоматически генирируемый пароль, добавлять индивидуальный доступ пользователю к определенному ресурсу, удалять unix и samba пользователей.
+${basename} | --- | [-vdr] [-n USERNAME] [-g GROUP,GROUP...] [-c COMMENT] [-a ACL PATH] [-p PERMISSION] [-s PASSWORD MODE].<br/>Автоматический комбаин который позволяет добавлять unix и samba пользователя, добавлять к ним автоматически генирируемый пароль, добавлять индивидуальный доступ пользователю к определенному ресурсу, удалять unix и samba пользователей.
 --- | -v | Verbose mode. Выводит в shell информацию о пользователе, группах, пароле и индивидуальному ACL доступу к папке/файлу.
 --- | -d | Dry run mode. Проверочный запуск скрипта только отображающий информацию о том как будет работать скрипт, без запуска функциональных команд.
 --- | -n USERNAME | Добавляет переменную имени пользователя в скрипт. Поcле опции -n пишется имя пользователя которого необходимо добавить.
@@ -87,8 +71,7 @@ sambasmb | --- | [-vdr] [-n USERNAME] [-g GROUP,GROUP...] [-c COMMENT] [-a ACL P
 --- | -P PASSWORD MODE | Добавляет переменную запускающую установку пароля пользователю. Есть два режима работы, same и random. Same устанавливает легкий пароль который идентичен имени пользователя, random генерирует восьмизначный пароль разных регистров со спецсимволом.
 --- | -r | Опция которая запускает режим удаления пользователя. Опция -n USERNAME обязательна к использованию с этим ключем, опционально -a ACL PATH. Удаляет unix пользователя, samba пользователя и очищает ACL доступ по заданному пути если тот был ранее установлен.
 
-Скрипт пишет лог по адресу /var/log/sambasmb.log  
-
+Скрипт пишет лог по адресу /var/log/${basename}.log  
 
 03.03.2021.  
 Добавлен скрипт инкрементального бэкапа по адресу /srv/smb_backup.sh  
