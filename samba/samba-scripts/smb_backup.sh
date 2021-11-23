@@ -7,7 +7,7 @@ user='fenix'
 date=`date "+%Y-%m-%dT%H"`
 increment_backup="back-${date}"
 HOST="${user}@192.168.0.215"
-SOURCE='/srv/efti/'
+SOURCE='/srv/samba/'
 BACKUPFOLDER="/home/${user}/backups/"
 DEST="/home/${user}/backups/$increment_backup"
 
@@ -28,11 +28,11 @@ ssh $HOST "
 #+ существующий inode.
 if [[ `ssh ${HOST} "ls ${BACKUPFOLDER}full_back &>/dev/null"` -ne 0 ]]; then # Если полной копии нет, создает ее.
     rsync -azA \
-	  --exclude /srv/efti/scanner/
+	  --exclude /srv/samba/scanner/
           ${SOURCE} ${HOST}:${BACKUPFOLDER}full_back 2>> /var/log/rsync.err
 else # В другом случае, делает инкрементное копирование.
     rsync -azA \
-          --exclude /srv/efti/scanner/ \
+          --exclude /srv/samba/scanner/ \
           --link-dest=/home/fenix/backups/current/ \
           ${SOURCE} ${HOST}:${DEST} 2>> /var/log/rsync.err \
           && ssh ${HOST} \
